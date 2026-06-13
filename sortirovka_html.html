@@ -1,0 +1,2068 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Сортировка HTML</title>
+  <style>
+    :root {
+      --bg0: #071725;
+      --bg1: #0e3048;
+      --panel: #12324a;
+      --panel2: #1a4968;
+      --panel3: #0a2134;
+      --line: #2d6688;
+      --text: #fff7d8;
+      --muted: #b9d1df;
+      --gold: #ffc531;
+      --orange: #f28a12;
+      --green: #72d532;
+      --blue: #1496e3;
+      --red: #f04b25;
+      --shadow: 0 16px 34px rgba(0,0,0,.38);
+      --radius: 18px;
+      font-family: "Trebuchet MS", "Arial Black", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(62,151,201,.35), transparent 38%),
+        linear-gradient(180deg, #06111d, #0a2032 52%, #040b12);
+      background-color: #040b12;
+      color: var(--text);
+      touch-action: none;
+    }
+
+    button {
+      border: 0;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      position: relative;
+      overflow: hidden;
+      transform-origin: center;
+    }
+
+    button.is-pressing {
+      transform: translateY(2px) scale(.965);
+      filter: brightness(1.12) saturate(1.08);
+    }
+
+    button.press-pop {
+      animation: buttonPop .28s cubic-bezier(.18, .9, .26, 1.25);
+    }
+
+    button:disabled {
+      cursor: default;
+      filter: grayscale(.4) brightness(.75);
+    }
+
+    .tap-ripple {
+      position: absolute;
+      width: var(--ripple-size);
+      height: var(--ripple-size);
+      left: var(--ripple-x);
+      top: var(--ripple-y);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 3;
+      background: radial-gradient(circle, rgba(255,255,255,.55), rgba(255,255,255,.18) 45%, transparent 68%);
+      transform: translate(-50%, -50%) scale(.12);
+      animation: tapRipple .46s ease-out forwards;
+      mix-blend-mode: screen;
+    }
+
+    @keyframes buttonPop {
+      0% { transform: translateY(2px) scale(.965); }
+      58% { transform: translateY(-1px) scale(1.025); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    @keyframes tapRipple {
+      0% { opacity: .9; transform: translate(-50%, -50%) scale(.12); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .phone {
+      position: relative;
+      width: min(100vw, 430px);
+      height: 100vh;
+      min-height: min(932px, 100vh);
+      margin: 0 auto;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(10,32,49,.1), rgba(4,12,19,.65)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='430' height='932' viewBox='0 0 430 932'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop stop-color='%2317364d'/%3E%3Cstop offset='1' stop-color='%23051421'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='430' height='932' fill='url(%23g)'/%3E%3Cg opacity='.22'%3E%3Cpath d='M0 460h430v472H0z' fill='%23040b12'/%3E%3Cpath d='M28 260h76v210H28zM132 214h70v256h-70zM230 246h76v224h-76zM333 198h65v272h-65z' fill='%232e4b5b'/%3E%3Cpath d='M36 278h60M36 320h60M36 362h60M36 404h60M140 236h54M140 278h54M140 320h54M140 362h54M140 404h54M238 266h60M238 308h60M238 350h60M238 392h60M341 220h50M341 262h50M341 304h50M341 346h50M341 388h50' stroke='%23ffd064' stroke-width='5'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: cover;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 28px 80px rgba(0,0,0,.45);
+    }
+
+    .topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      display: grid;
+      grid-template-columns: 1.15fr .9fr .75fr 48px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      z-index: 20;
+      background: linear-gradient(180deg, rgba(4,17,28,.92), rgba(4,17,28,.25));
+      transition: opacity .16s ease, transform .16s ease;
+    }
+
+    .phone.in-game .topbar {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-66px);
+    }
+
+    .res-pill {
+      min-width: 0;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 9px;
+      border-radius: 12px;
+      border: 1px solid rgba(130,202,236,.25);
+      background: linear-gradient(180deg, #17364e, #071b2d);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.12), 0 5px 10px rgba(0,0,0,.28);
+      font-weight: 900;
+      text-shadow: 0 2px 0 rgba(0,0,0,.35);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .res-icon {
+      width: 27px;
+      height: 27px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      filter: drop-shadow(0 3px 2px rgba(0,0,0,.35));
+    }
+
+    .heart-icon {
+      color: #ff3f24;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .coin-icon,
+    .gem-icon,
+    .star-icon {
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff7a7 0 12%, #ffd33f 13% 46%, #dd8508 47% 100%);
+      border: 2px solid #ffd863;
+      box-shadow: inset 0 -3px 0 rgba(151,76,3,.45);
+    }
+
+    .gem-icon {
+      border-radius: 7px;
+      transform: rotate(45deg) scale(.78);
+      background: linear-gradient(135deg, #8df8ff, #1476ff 52%, #064bb3);
+      border-color: #9ef8ff;
+    }
+
+    .menu-btn,
+    .back-btn,
+    .pause-small {
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: linear-gradient(180deg, #2d8dcc, #0c4d76);
+      border: 1px solid #73c8f6;
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.22), 0 5px 0 #062a40, 0 9px 12px rgba(0,0,0,.32);
+      font-weight: 1000;
+      font-size: 24px;
+      text-shadow: 0 2px 0 rgba(0,0,0,.45);
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      padding: 76px 16px 18px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px) scale(.985);
+      transition: opacity .22s ease, transform .22s ease;
+      z-index: 5;
+    }
+
+    .screen.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    .center {
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      min-height: 100%;
+      gap: 14px;
+    }
+
+    .panel {
+      width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid rgba(137,207,238,.28);
+      background: linear-gradient(180deg, rgba(30,75,106,.95), rgba(8,31,50,.96));
+      box-shadow: var(--shadow), inset 0 2px 0 rgba(255,255,255,.12);
+      padding: 14px;
+    }
+
+    .title {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(34px, 11vw, 56px);
+      line-height: .95;
+      color: #ffdc54;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      text-shadow:
+        0 4px 0 #7b3900,
+        0 7px 0 rgba(0,0,0,.42),
+        0 0 24px rgba(255,199,42,.35);
+    }
+
+    .box-logo {
+      position: relative;
+      width: 98px;
+      height: 78px;
+      filter: drop-shadow(0 10px 8px rgba(0,0,0,.42));
+    }
+
+    .box-logo::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 0;
+      height: 56px;
+      border-radius: 6px 6px 10px 10px;
+      background: linear-gradient(135deg, #d78208, #ffbd2a 48%, #b75c05);
+      border: 2px solid #7d3c05;
+      box-shadow: inset -12px 0 rgba(0,0,0,.12);
+    }
+
+    .box-logo::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      top: 10px;
+      height: 24px;
+      background:
+        linear-gradient(135deg, transparent 0 45%, #ffe48a 46% 54%, transparent 55%),
+        linear-gradient(90deg, #ffc039, #e17b08);
+      clip-path: polygon(10% 0, 42% 0, 50% 60%, 58% 0, 90% 0, 78% 100%, 22% 100%);
+      border: 2px solid #7d3c05;
+      border-radius: 4px;
+    }
+
+    .player-card {
+      width: min(260px, 86%);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      text-align: center;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #17374f, #071c2c);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.12), 0 10px 18px rgba(0,0,0,.32);
+    }
+
+    .rank-line {
+      color: var(--text);
+      font-weight: 900;
+      text-shadow: 0 2px 0 rgba(0,0,0,.5);
+    }
+
+    .xp-bar {
+      height: 19px;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.22);
+      background: #041522;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,.5);
+    }
+
+    .xp-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(180deg, #a8ff64, #35b80f);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.25), 0 0 12px rgba(103,255,71,.45);
+      transition: width .25s ease;
+    }
+
+    .big-btn,
+    .blue-btn,
+    .green-btn,
+    .red-btn,
+    .gray-btn {
+      min-height: 58px;
+      border-radius: 16px;
+      padding: 10px 18px;
+      font-weight: 1000;
+      text-transform: uppercase;
+      text-align: center;
+      text-shadow: 0 3px 0 rgba(0,0,0,.42);
+      border: 1px solid rgba(255,255,255,.34);
+      box-shadow: inset 0 3px 0 rgba(255,255,255,.28), 0 7px 0 #6d3702, 0 12px 18px rgba(0,0,0,.36);
+    }
+
+    .big-btn {
+      width: min(246px, 86%);
+      min-height: 74px;
+      font-size: 28px;
+      color: #fff6d8;
+      background: linear-gradient(180deg, #ffe55c, #ffb516 53%, #e17807);
+    }
+
+    .blue-btn {
+      background: linear-gradient(180deg, #2da7f5, #0976ba 56%, #07517f);
+      box-shadow: inset 0 3px 0 rgba(255,255,255,.25), 0 7px 0 #053451, 0 12px 18px rgba(0,0,0,.32);
+    }
+
+    .green-btn {
+      background: linear-gradient(180deg, #9af04c, #4bc213 55%, #218707);
+      box-shadow: inset 0 3px 0 rgba(255,255,255,.25), 0 7px 0 #145a04, 0 12px 18px rgba(0,0,0,.32);
+    }
+
+    .red-btn {
+      background: linear-gradient(180deg, #ff7848, #f13b18 57%, #ae1d0a);
+      box-shadow: inset 0 3px 0 rgba(255,255,255,.25), 0 7px 0 #721205, 0 12px 18px rgba(0,0,0,.32);
+    }
+
+    .gray-btn {
+      background: linear-gradient(180deg, #7193aa, #31566f 57%, #17364d);
+      box-shadow: inset 0 3px 0 rgba(255,255,255,.2), 0 7px 0 #082237, 0 12px 18px rgba(0,0,0,.32);
+    }
+
+    .nav-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .square-btn {
+      min-height: 90px;
+      display: grid;
+      place-items: center;
+      gap: 5px;
+      border-radius: 14px;
+      padding: 9px 6px;
+      background: linear-gradient(180deg, #228fd4, #0c6096 58%, #073955);
+      border: 1px solid #69c5f5;
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.2), 0 6px 0 #062b42, 0 11px 15px rgba(0,0,0,.32);
+      font-size: 13px;
+      font-weight: 1000;
+      text-transform: uppercase;
+      text-align: center;
+      text-shadow: 0 2px 0 rgba(0,0,0,.45);
+      position: relative;
+    }
+
+    .square-icon {
+      font-size: 30px;
+      filter: drop-shadow(0 4px 2px rgba(0,0,0,.35));
+    }
+
+    .badge {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      min-width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #ff6f42, #d91d0a);
+      border: 2px solid #ffd7b8;
+      box-shadow: 0 3px 6px rgba(0,0,0,.38);
+      font-size: 14px;
+    }
+
+    .screen-head {
+      position: relative;
+      display: grid;
+      grid-template-columns: 48px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .screen-title {
+      margin: 0;
+      text-align: center;
+      font-size: 30px;
+      text-transform: uppercase;
+      color: #fff8dd;
+      text-shadow: 0 4px 0 rgba(0,0,0,.45);
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 9px;
+      margin: 10px 0 14px;
+    }
+
+    .level-grid.filtered {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .level-card {
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 3px;
+      border-radius: 13px;
+      font-size: 26px;
+      font-weight: 1000;
+      color: #fff;
+      background: linear-gradient(180deg, #8ce54d, #38b418 60%, #1d7b0d);
+      border: 1px solid rgba(255,255,255,.35);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.26), 0 5px 0 #145805, 0 8px 12px rgba(0,0,0,.32);
+      text-shadow: 0 3px 0 rgba(0,0,0,.42);
+    }
+
+    .level-card.current {
+      background: linear-gradient(180deg, #64caff, #1889d3 60%, #075380);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.26), 0 5px 0 #053450, 0 0 18px rgba(74,207,255,.42);
+    }
+
+    .level-card.locked {
+      color: #b9c5cd;
+      background: linear-gradient(180deg, #49677c, #223f55 60%, #102638);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.13), 0 5px 0 #071a28;
+    }
+
+    .stars {
+      display: flex;
+      gap: 1px;
+      font-size: 13px;
+      line-height: 1;
+      color: #ffc531;
+      text-shadow: 0 2px 0 rgba(0,0,0,.45);
+    }
+
+    .filter-row,
+    .tab-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .small-tab {
+      min-height: 47px;
+      border-radius: 11px;
+      font-size: 13px;
+      font-weight: 1000;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, #315875, #153a55);
+      border: 1px solid rgba(133,202,236,.28);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.12), 0 4px 0 #071d2d;
+      text-shadow: 0 2px 0 rgba(0,0,0,.45);
+    }
+
+    .small-tab.active {
+      background: linear-gradient(180deg, #2da7f5, #0c70ad);
+      border-color: #78cffb;
+    }
+
+    .game-screen {
+      padding: 0;
+      background: linear-gradient(180deg, rgba(6,18,29,.45), rgba(3,8,13,.4));
+    }
+
+    .game-hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 12;
+      height: 126px;
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: 48px 1fr 72px;
+      grid-template-rows: 38px 34px 38px;
+      gap: 4px 8px;
+      background: linear-gradient(180deg, rgba(5,18,29,.98), rgba(6,22,36,.35));
+    }
+
+    .level-label {
+      grid-column: 2;
+      text-align: center;
+      font-weight: 1000;
+      text-transform: uppercase;
+      color: #fff8dd;
+      text-shadow: 0 3px 0 rgba(0,0,0,.45);
+    }
+
+    .goal-bar {
+      grid-column: 2;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #17374f, #061b2b);
+      border: 1px solid rgba(255,255,255,.15);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,.35);
+      font-size: 18px;
+      font-weight: 1000;
+    }
+
+    .heart-row {
+      grid-column: 1 / 3;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 22px;
+      color: #ff3e24;
+      text-shadow: 0 2px 0 rgba(0,0,0,.4);
+    }
+
+    .combo-box {
+      grid-row: 2 / 4;
+      grid-column: 3;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 1px;
+      text-transform: uppercase;
+      color: #ffd75d;
+      font-size: 12px;
+      font-weight: 1000;
+      text-shadow: 0 2px 0 rgba(0,0,0,.45);
+    }
+
+    .combo-box b {
+      font-size: 34px;
+      color: #fff;
+    }
+
+    .game-world {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .shelves {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 90px;
+      height: 190px;
+      opacity: .48;
+      background:
+        repeating-linear-gradient(90deg, rgba(156,100,41,.35) 0 56px, rgba(90,54,27,.32) 56px 62px),
+        repeating-linear-gradient(180deg, transparent 0 38px, rgba(255,214,114,.25) 38px 44px);
+      mask-image: linear-gradient(180deg, #000, transparent);
+    }
+
+    .conveyor {
+      position: absolute;
+      left: -20px;
+      right: -20px;
+      top: 250px;
+      height: 54px;
+      border-top: 3px solid #3a5a6c;
+      border-bottom: 5px solid #07121b;
+      background:
+        repeating-linear-gradient(90deg, #1a2e3d 0 36px, #213f52 36px 42px),
+        linear-gradient(180deg, #34576b, #152b3b);
+      box-shadow: inset 0 8px 0 rgba(255,255,255,.08), 0 12px 14px rgba(0,0,0,.34);
+    }
+
+    .conveyor::after {
+      content: "";
+      position: absolute;
+      inset: 7px 0 auto;
+      height: 12px;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 8px, transparent 8px 34px);
+      animation: belt 1.2s linear infinite;
+    }
+
+    @keyframes belt {
+      to { transform: translateX(42px); }
+    }
+
+    .box {
+      position: absolute;
+      width: 48px;
+      height: 44px;
+      border-radius: 6px;
+      border: 2px solid rgba(0,0,0,.36);
+      box-shadow: inset -8px -8px 0 rgba(0,0,0,.12), inset 4px 4px 0 rgba(255,255,255,.22), 0 9px 9px rgba(0,0,0,.35);
+      z-index: 8;
+      cursor: grab;
+      display: grid;
+      place-items: center;
+      font-weight: 1000;
+      text-shadow: 0 2px 0 rgba(0,0,0,.42);
+      transition: filter .12s ease, transform .12s ease;
+      touch-action: none;
+    }
+
+    .box::before {
+      content: "";
+      position: absolute;
+      left: -2px;
+      top: -13px;
+      width: calc(100% + 4px);
+      height: 17px;
+      border-radius: 6px 6px 3px 3px;
+      background: inherit;
+      filter: brightness(1.22);
+      clip-path: polygon(10% 100%, 24% 0, 50% 36%, 76% 0, 90% 100%);
+      border: 2px solid rgba(0,0,0,.32);
+      border-bottom: 0;
+    }
+
+    .box::after {
+      content: "";
+      position: absolute;
+      top: -11px;
+      bottom: 0;
+      left: 50%;
+      width: 7px;
+      transform: translateX(-50%);
+      background: rgba(255,239,164,.55);
+      border-left: 1px solid rgba(0,0,0,.12);
+      border-right: 1px solid rgba(0,0,0,.12);
+    }
+
+    .box.dragging {
+      cursor: grabbing;
+      z-index: 40;
+      filter: brightness(1.12) drop-shadow(0 0 14px rgba(255,255,255,.25));
+      transform: scale(1.08) rotate(-3deg);
+    }
+
+    .box.yellow { background: linear-gradient(135deg, #fff06b, #e5a217 58%, #a55e04); }
+    .box.green { background: linear-gradient(135deg, #b7ff71, #4ebd16 58%, #207507); }
+    .box.red { background: linear-gradient(135deg, #ff9a6c, #e93b1a 58%, #8f1707); }
+    .box.blue { background: linear-gradient(135deg, #8ee8ff, #168ee3 58%, #07528c); }
+    .box.rainbow {
+      background: linear-gradient(135deg, #ff3d5d, #ffd437 26%, #4bd221 50%, #29a9ff 76%, #b44dff);
+      box-shadow: inset -8px -8px 0 rgba(0,0,0,.12), inset 4px 4px 0 rgba(255,255,255,.22), 0 0 18px rgba(255,80,220,.7);
+    }
+    .box.bomb {
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 25%, #707a82, #202a30 48%, #070a0d);
+    }
+
+    .box.bomb::before {
+      top: -10px;
+      left: 30px;
+      width: 15px;
+      height: 15px;
+      border: 0;
+      border-radius: 50% 50% 0 50%;
+      background: #f28a12;
+      clip-path: none;
+    }
+
+    .box.bomb::after {
+      display: none;
+    }
+
+    .x2-mark {
+      position: relative;
+      z-index: 2;
+      padding: 2px 5px;
+      border-radius: 999px;
+      background: rgba(5,16,24,.7);
+      border: 1px solid rgba(255,255,255,.24);
+      font-size: 14px;
+    }
+
+    .truck-row {
+      position: absolute;
+      left: 9px;
+      right: 9px;
+      bottom: 112px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      z-index: 6;
+    }
+
+    .truck {
+      position: relative;
+      height: 91px;
+      border-radius: 10px 10px 7px 7px;
+      border: 3px solid rgba(0,0,0,.45);
+      box-shadow: inset 0 8px 0 rgba(255,255,255,.18), inset -9px -12px 0 rgba(0,0,0,.14), 0 10px 10px rgba(0,0,0,.35);
+      transition: transform .1s ease, filter .12s ease;
+    }
+
+    .truck::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      right: 7px;
+      top: 10px;
+      height: 44px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.14);
+      box-shadow: inset 0 3px 0 rgba(255,255,255,.2);
+    }
+
+    .truck::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: -8px;
+      height: 14px;
+      background:
+        radial-gradient(circle at 12px 7px, #111 0 7px, transparent 8px),
+        radial-gradient(circle at calc(100% - 12px) 7px, #111 0 7px, transparent 8px);
+    }
+
+    .truck.accept {
+      transform: translateY(-8px) scale(1.04);
+      filter: drop-shadow(0 0 14px rgba(255,244,147,.7)) brightness(1.12);
+    }
+
+    .truck.yellow { background: linear-gradient(180deg, #ffd94b, #e99b12 58%, #9e5505); }
+    .truck.green { background: linear-gradient(180deg, #8dec47, #42b30f 58%, #1d6908); }
+    .truck.red { background: linear-gradient(180deg, #ff7847, #df3218 58%, #8f1508); }
+    .truck.blue { background: linear-gradient(180deg, #5ecbff, #1383d0 58%, #075086); }
+
+    .color-label {
+      position: absolute;
+      left: 50%;
+      bottom: -27px;
+      transform: translateX(-50%);
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.44);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 900;
+      display: none;
+      white-space: nowrap;
+    }
+
+    .labels-on .color-label { display: block; }
+
+    .booster-row {
+      position: absolute;
+      left: 9px;
+      right: 9px;
+      bottom: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      z-index: 11;
+    }
+
+    .booster {
+      min-height: 82px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 3px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #285a7c, #112f49);
+      border: 1px solid rgba(139,208,243,.33);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.12), 0 5px 0 #061b2b;
+      font-size: 10px;
+      font-weight: 1000;
+      text-transform: uppercase;
+      text-align: center;
+      text-shadow: 0 2px 0 rgba(0,0,0,.45);
+      position: relative;
+    }
+
+    .booster i {
+      font-style: normal;
+      font-size: 29px;
+      line-height: 1;
+      filter: drop-shadow(0 3px 2px rgba(0,0,0,.35));
+    }
+
+    .count-dot {
+      position: absolute;
+      top: -6px;
+      right: -5px;
+      min-width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #263f51;
+      border: 2px solid #cce7f7;
+      font-size: 12px;
+    }
+
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 60;
+      animation: pop .62s ease-out forwards;
+    }
+
+    @keyframes pop {
+      to { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; }
+    }
+
+    .shake {
+      animation: shake .24s linear;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-7px); }
+      55% { transform: translateX(7px); }
+      80% { transform: translateX(-4px); }
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 18px;
+      z-index: 80;
+      background: rgba(2,8,13,.66);
+      backdrop-filter: blur(2px);
+    }
+
+    .overlay.open { display: grid; }
+
+    .modal {
+      width: min(300px, 90%);
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #1a4663, #082238);
+      border: 1px solid rgba(139,208,243,.34);
+      box-shadow: var(--shadow), inset 0 2px 0 rgba(255,255,255,.14);
+      text-align: center;
+    }
+
+    .modal h2 {
+      margin: 0;
+      font-size: 31px;
+      text-transform: uppercase;
+      color: #fff7d8;
+      text-shadow: 0 4px 0 rgba(0,0,0,.45);
+    }
+
+    .win-stars {
+      display: flex;
+      justify-content: center;
+      gap: 13px;
+      margin: 5px 0;
+      font-size: 52px;
+      color: #ffd233;
+      filter: drop-shadow(0 6px 0 rgba(0,0,0,.32));
+    }
+
+    .reward-line {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 9px;
+      padding: 13px;
+      border-radius: 13px;
+      background: rgba(4,17,28,.48);
+      border: 1px solid rgba(255,255,255,.12);
+      font-weight: 1000;
+    }
+
+    .setting-row,
+    .shop-row,
+    .achievement-row,
+    .daily-card {
+      display: grid;
+      gap: 8px;
+      align-items: center;
+      border-radius: 13px;
+      border: 1px solid rgba(134,202,236,.22);
+      background: linear-gradient(180deg, rgba(34,82,112,.9), rgba(9,31,50,.9));
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.09);
+      padding: 11px;
+    }
+
+    .setting-row {
+      grid-template-columns: 1fr 58px;
+      min-height: 58px;
+      font-size: 17px;
+      font-weight: 1000;
+    }
+
+    .switch {
+      width: 53px;
+      height: 31px;
+      padding: 3px;
+      border-radius: 999px;
+      background: #20394b;
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 2px 3px rgba(0,0,0,.35);
+    }
+
+    .switch span {
+      display: block;
+      width: 23px;
+      height: 23px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #edf7ff, #97b9ca);
+      transition: transform .18s ease, background .18s ease;
+    }
+
+    .switch.on {
+      background: linear-gradient(180deg, #87e84b, #25a310);
+    }
+
+    .switch.on span {
+      transform: translateX(21px);
+      background: linear-gradient(180deg, #fff, #c8f7b6);
+    }
+
+    .list {
+      display: grid;
+      gap: 9px;
+      max-height: calc(100vh - 170px);
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .shop-row {
+      grid-template-columns: 48px 1fr 82px;
+    }
+
+    .shop-icon,
+    .ach-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #2d5b78, #102e46);
+      font-size: 27px;
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.14);
+    }
+
+    .shop-row h3,
+    .achievement-row h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #fff7d8;
+      text-shadow: 0 2px 0 rgba(0,0,0,.45);
+    }
+
+    .shop-row p,
+    .achievement-row p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.28;
+    }
+
+    .buy-btn {
+      min-height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #8eea46, #35aa0c);
+      border: 1px solid rgba(255,255,255,.35);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.2), 0 4px 0 #155804;
+      font-size: 14px;
+      font-weight: 1000;
+      text-shadow: 0 2px 0 rgba(0,0,0,.38);
+    }
+
+    .achievement-row {
+      grid-template-columns: 54px 1fr 72px;
+    }
+
+    .progress-line {
+      height: 12px;
+      border-radius: 999px;
+      background: #071827;
+      overflow: hidden;
+      margin-top: 6px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,.5);
+    }
+
+    .progress-line span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(180deg, #9eff57, #37b70f);
+    }
+
+    .daily-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .daily-card {
+      min-height: 92px;
+      justify-items: center;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 900;
+      position: relative;
+    }
+
+    .daily-card.today {
+      border-color: #ffd75d;
+      box-shadow: 0 0 0 2px rgba(255,213,76,.35), 0 0 18px rgba(255,199,42,.28);
+    }
+
+    .daily-card.locked {
+      filter: grayscale(.65) brightness(.76);
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 118px;
+      transform: translateX(-50%) translateY(18px);
+      max-width: 90%;
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: rgba(3,12,20,.92);
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      text-align: center;
+      font-weight: 900;
+      transition: opacity .16s ease, transform .16s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+</style>
+</head>
+<body>
+  <div class="phone" id="phone">
+    <header class="topbar" id="topbar">
+      <div class="res-pill"><span class="res-icon heart-icon">♥</span><span id="topHearts">5</span><span id="playerName">Макс</span></div>
+      <div class="res-pill"><span class="res-icon coin-icon"></span><span id="topCoins">1250</span></div>
+      <div class="res-pill"><span class="res-icon gem-icon"></span><span id="topGems">35</span></div>
+      <button class="menu-btn" id="quickMenuBtn">≡</button>
+    </header>
+
+    <section class="screen active" id="menuScreen">
+      <div class="center">
+        <div class="box-logo" aria-hidden="true"></div>
+        <h1 class="title">Сортировка</h1>
+        <div class="player-card">
+          <div class="rank-line">Уровень <span id="profileLevel">12</span></div>
+          <div>Ранг: <span id="profileRank">Рабочий склада</span></div>
+          <div class="xp-bar"><div class="xp-fill" id="profileXp"></div></div>
+          <div id="profileXpText">320/500</div>
+        </div>
+        <button class="big-btn" id="playBtn">Играть</button>
+        <button class="blue-btn" id="levelsBtn" style="width:min(246px,86%);">Уровни</button>
+        <div class="nav-grid">
+          <button class="square-btn" id="shopBtn"><span class="square-icon">🎁</span>Магазин</button>
+          <button class="square-btn" id="dailyBtn"><span class="square-icon">🏆</span>Ежедневные<br>награды</button>
+          <button class="square-btn" id="settingsBtn"><span class="square-icon">⚙</span>Настройки</button>
+          <button class="square-btn" id="achievementsBtn"><span class="square-icon">🏆</span>Достижения</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="levelsScreen">
+      <div class="panel">
+        <div class="screen-head">
+          <button class="back-btn" data-screen="menuScreen">‹</button>
+          <h2 class="screen-title">Уровни</h2>
+          <span></span>
+        </div>
+        <div class="level-grid" id="levelGrid"></div>
+        <div class="filter-row">
+          <button class="small-tab active" data-filter="normal">🟡 Обычные</button>
+          <button class="small-tab" data-filter="combo">Комбо</button>
+          <button class="small-tab" data-filter="x2">x2 груз</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen game-screen" id="gameScreen">
+      <div class="game-world" id="gameWorld">
+        <div class="shelves"></div>
+        <div class="conveyor"></div>
+        <div id="boxLayer"></div>
+        <div class="truck-row" id="truckRow">
+          <div class="truck yellow" data-color="yellow"><span class="color-label">Жёлтый</span></div>
+          <div class="truck red" data-color="red"><span class="color-label">Красный</span></div>
+          <div class="truck green" data-color="green"><span class="color-label">Зелёный</span></div>
+          <div class="truck blue" data-color="blue"><span class="color-label">Синий</span></div>
+        </div>
+      </div>
+      <div class="game-hud">
+        <button class="pause-small" id="pauseBtn">Ⅱ</button>
+        <div class="level-label" id="hudLevel">Уровень 12</div>
+        <div class="goal-bar"><span class="star-icon res-icon"></span><span id="hudGoal">0/20</span></div>
+        <div class="heart-row" id="heartRow"></div>
+        <div class="combo-box"><span>Комбо</span><b id="comboText">x0</b></div>
+      </div>
+      <div class="booster-row">
+        <button class="booster" data-booster="slow"><span class="count-dot" id="slowCount">3</span><i>❄</i>Замедление</button>
+        <button class="booster" data-booster="shield"><span class="count-dot" id="shieldCount">2</span><i>🛡</i>Щит</button>
+        <button class="booster" data-booster="helper"><span class="count-dot" id="helperCount">2</span><i>✋</i>Помощник</button>
+        <button class="booster" data-booster="auto"><span class="count-dot" id="autoCount">1</span><i>🎁</i>Автосорт</button>
+      </div>
+    </section>
+
+    <section class="screen" id="shopScreen">
+      <div class="panel">
+        <div class="screen-head">
+          <button class="back-btn" data-screen="menuScreen">‹</button>
+          <h2 class="screen-title">Магазин</h2>
+          <span></span>
+        </div>
+        <div class="tab-row">
+          <button class="small-tab active" data-shop-tab="upgrades">Улучшения</button>
+          <button class="small-tab" data-shop-tab="boosters">Бустеры</button>
+          <button class="small-tab" data-shop-tab="style">Оформление</button>
+        </div>
+        <div class="list" id="shopList" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="dailyScreen">
+      <div class="panel">
+        <div class="screen-head">
+          <button class="back-btn" data-screen="menuScreen">‹</button>
+          <h2 class="screen-title">Ежедневные</h2>
+          <span></span>
+        </div>
+        <div class="daily-row" id="dailyRow"></div>
+        <div class="panel" style="margin-top:12px;">
+          <h3 style="margin:0 0 8px; text-transform:uppercase;">Задания дня</h3>
+          <div class="list" id="dailyTasks"></div>
+          <button class="green-btn" id="claimDailyBtn" style="width:100%; margin-top:12px;">Получить</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="settingsScreen">
+      <div class="panel">
+        <div class="screen-head">
+          <button class="back-btn" data-screen="menuScreen">‹</button>
+          <h2 class="screen-title">Настройки</h2>
+          <span></span>
+        </div>
+        <div class="list" id="settingsList"></div>
+        <div class="filter-row" style="margin-top:12px;">
+          <button class="small-tab active">Язык</button>
+          <button class="small-tab">RU</button>
+          <button class="small-tab" id="supportBtn">Поддержка</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="achievementsScreen">
+      <div class="panel">
+        <div class="screen-head">
+          <button class="back-btn" data-screen="menuScreen">‹</button>
+          <h2 class="screen-title">Достижения</h2>
+          <span></span>
+        </div>
+        <div class="list" id="achievementList"></div>
+      </div>
+    </section>
+
+    <div class="overlay" id="pauseOverlay">
+      <div class="modal">
+        <h2>Пауза</h2>
+        <button class="green-btn" id="resumeBtn">Продолжить</button>
+        <button class="blue-btn" id="pauseSettingsBtn">Настройки</button>
+        <button class="red-btn" id="restartBtn">Заново</button>
+        <button class="gray-btn" id="exitLevelBtn">Выход</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="winOverlay">
+      <div class="modal">
+        <h2 id="winTitle">Победа!</h2>
+        <div class="win-stars" id="winStars">★★★</div>
+        <div class="reward-line">
+          <span>🪙 <b id="winCoins">120</b></span>
+          <span>⭐ <b id="winXp">10</b></span>
+          <span>❄ x<b id="winBoost">1</b></span>
+        </div>
+        <button class="green-btn" id="nextBtn">Далее</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "sortirovka_html_save_v1";
+      const COLORS = ["yellow", "red", "green", "blue"];
+      const COLOR_NAMES = { yellow: "Жёлтый", red: "Красный", green: "Зелёный", blue: "Синий", rainbow: "Радуга", bomb: "Бомба" };
+      const COIN_VALUE = { yellow: 2, red: 2, green: 1, blue: 1, rainbow: 3 };
+      const RANKS = [
+        { name: "Новичок", xp: 0 },
+        { name: "Рабочий склада", xp: 260 },
+        { name: "Логист", xp: 740 },
+        { name: "Менеджер", xp: 1450 },
+        { name: "Директор", xp: 2400 }
+      ];
+      const LEVELS = Array.from({ length: 15 }, (_, i) => {
+        const n = i + 1;
+        const mode = n % 5 === 0 ? "x2" : n % 3 === 0 ? "combo" : "normal";
+        return {
+          id: n,
+          mode,
+          target: mode === "combo" ? 6 + Math.floor(n / 2) : mode === "x2" ? 3 + Math.floor(n / 4) : 12 + n * 2,
+          speed: 42 + n * 4,
+          spawn: Math.max(650, 1250 - n * 35),
+          special: Math.min(.32, .05 + n * .018),
+          unlockedColorCount: Math.min(4, 2 + Math.floor((n - 1) / 4))
+        };
+      });
+
+      const defaultSave = {
+        coins: 1250,
+        gems: 35,
+        xp: 320,
+        level: 12,
+        unlocked: 12,
+        stars: {},
+        settings: { sound: true, music: true, vibration: true, labels: true },
+        boosters: { slow: 3, shield: 2, helper: 2, auto: 1 },
+        upgrades: { hearts: 0, warehouse: 0, conveyor: 0, theme: 0 },
+        stats: { sorted: 650, bestCombo: 15, coinsEarned: 1250, perfect: 5, x2: 0 },
+        claimedAchievements: {},
+        lastDaily: "",
+        streak: 3
+      };
+
+      const state = {
+        screen: "menuScreen",
+        shopTab: "upgrades",
+        levelFilter: "normal",
+        save: load(),
+        game: null,
+        audio: null,
+        drag: null,
+        raf: 0,
+        lastTime: 0
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const dom = {
+        phone: $("phone"),
+        topbar: $("topbar"),
+        topHearts: $("topHearts"),
+        topCoins: $("topCoins"),
+        topGems: $("topGems"),
+        profileLevel: $("profileLevel"),
+        profileRank: $("profileRank"),
+        profileXp: $("profileXp"),
+        profileXpText: $("profileXpText"),
+        levelGrid: $("levelGrid"),
+        boxLayer: $("boxLayer"),
+        truckRow: $("truckRow"),
+        hudLevel: $("hudLevel"),
+        hudGoal: $("hudGoal"),
+        heartRow: $("heartRow"),
+        comboText: $("comboText"),
+        pauseOverlay: $("pauseOverlay"),
+        winOverlay: $("winOverlay"),
+        winTitle: $("winTitle"),
+        winStars: $("winStars"),
+        winCoins: $("winCoins"),
+        winXp: $("winXp"),
+        winBoost: $("winBoost"),
+        toast: $("toast"),
+        shopList: $("shopList"),
+        dailyRow: $("dailyRow"),
+        dailyTasks: $("dailyTasks"),
+        settingsList: $("settingsList"),
+        achievementList: $("achievementList")
+      };
+
+      function load() {
+        try {
+          return merge(defaultSave, JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"));
+        } catch {
+          return structuredClone(defaultSave);
+        }
+      }
+
+      function merge(base, extra) {
+        const out = Array.isArray(base) ? [...base] : { ...base };
+        Object.keys(extra || {}).forEach((key) => {
+          out[key] = base[key] && typeof base[key] === "object" && !Array.isArray(base[key])
+            ? merge(base[key], extra[key])
+            : extra[key];
+        });
+        return out;
+      }
+
+      function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.save));
+      }
+
+      function initAudio() {
+        if (state.audio) return state.audio;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        state.audio = AudioContext ? new AudioContext() : null;
+        return state.audio;
+      }
+
+      function sfx(type) {
+        if (!state.save.settings.sound) return;
+        const ctx = initAudio();
+        if (!ctx) return;
+        if (ctx.state === "suspended") ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        const table = {
+          click: [420, 0.04, "triangle", 0.045],
+          good: [660, 0.09, "sine", 0.06],
+          bad: [110, 0.15, "sawtooth", 0.05],
+          win: [880, 0.22, "triangle", 0.07],
+          booster: [520, 0.12, "square", 0.04]
+        }[type] || [360, 0.06, "sine", 0.04];
+        osc.type = table[2];
+        osc.frequency.setValueAtTime(table[0], now);
+        osc.frequency.exponentialRampToValueAtTime(table[0] * 1.8, now + table[1]);
+        gain.gain.setValueAtTime(table[3], now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + table[1]);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + table[1] + 0.03);
+      }
+
+      function vibrate(ms = 24) {
+        if (state.save.settings.vibration && navigator.vibrate) navigator.vibrate(ms);
+      }
+
+      function toast(text) {
+        dom.toast.textContent = text;
+        dom.toast.classList.add("show");
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => dom.toast.classList.remove("show"), 1900);
+      }
+
+      function show(screen) {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        $(screen).classList.add("active");
+        state.screen = screen;
+        dom.phone.classList.toggle("in-game", screen === "gameScreen");
+        dom.pauseOverlay.classList.remove("open");
+        if (screen !== "gameScreen") stopGame();
+        refreshAll();
+        sfx("click");
+      }
+
+      function refreshAll() {
+        renderTop();
+        renderProfile();
+        renderLevels();
+        renderShop();
+        renderDaily();
+        renderSettings();
+        renderAchievements();
+        dom.truckRow.classList.toggle("labels-on", !!state.save.settings.labels);
+      }
+
+      function rankInfo() {
+        let rank = RANKS[0];
+        let next = RANKS[1];
+        for (let i = 0; i < RANKS.length; i++) {
+          if (state.save.xp >= RANKS[i].xp) {
+            rank = RANKS[i];
+            next = RANKS[i + 1] || { name: rank.name, xp: rank.xp + 500 };
+          }
+        }
+        return { rank, next };
+      }
+
+      function maxHearts() {
+        return 5 + state.save.upgrades.hearts;
+      }
+
+      function renderTop() {
+        dom.topHearts.textContent = maxHearts();
+        dom.topCoins.textContent = state.save.coins.toLocaleString("ru-RU");
+        dom.topGems.textContent = state.save.gems.toLocaleString("ru-RU");
+      }
+
+      function renderProfile() {
+        const { rank, next } = rankInfo();
+        const prevXp = rank.xp;
+        const need = Math.max(1, next.xp - prevXp);
+        const got = Math.max(0, state.save.xp - prevXp);
+        const pct = Math.min(100, (got / need) * 100);
+        dom.profileLevel.textContent = state.save.level;
+        dom.profileRank.textContent = rank.name;
+        dom.profileXp.style.width = pct + "%";
+        dom.profileXpText.textContent = `${got}/${need}`;
+      }
+
+      function renderLevels() {
+        const visible = LEVELS.filter((lvl) => state.levelFilter === "normal" ? lvl.mode === "normal" : lvl.mode === state.levelFilter);
+        dom.levelGrid.classList.toggle("filtered", state.levelFilter !== "normal");
+        dom.levelGrid.innerHTML = visible.map((lvl) => {
+          const locked = lvl.id > state.save.unlocked;
+          const stars = state.save.stars[lvl.id] || 0;
+          return `
+            <button class="level-card ${locked ? "locked" : ""} ${lvl.id === state.save.level ? "current" : ""}" data-level="${lvl.id}" ${locked ? "disabled" : ""}>
+              <span>${locked ? "🔒" : lvl.id}</span>
+              <span class="stars">${"★".repeat(stars)}${"☆".repeat(Math.max(0, 3 - stars))}</span>
+            </button>
+          `;
+        }).join("");
+        dom.levelGrid.querySelectorAll("[data-level]").forEach((btn) => {
+          btn.addEventListener("click", () => startLevel(Number(btn.dataset.level)));
+        });
+      }
+
+      function levelGoalText(game = state.game) {
+        if (!game) return "";
+        if (game.level.mode === "combo") return `${game.bestCombo}/${game.level.target}`;
+        if (game.level.mode === "x2") return `${game.x2Sorted}/${game.level.target}`;
+        return `${game.sorted}/${game.level.target}`;
+      }
+
+      function renderGameHud() {
+        const g = state.game;
+        if (!g) return;
+        dom.hudLevel.textContent = `Уровень ${g.level.id}`;
+        dom.hudGoal.textContent = levelGoalText(g);
+        dom.comboText.textContent = `x${g.combo}`;
+        dom.heartRow.innerHTML = "♥".repeat(Math.max(0, g.lives)) + `<span style="opacity:.35">${"♥".repeat(Math.max(0, maxHearts() - g.lives))}</span>`;
+        ["slow", "shield", "helper", "auto"].forEach((b) => {
+          $(`${b}Count`).textContent = state.save.boosters[b] || 0;
+        });
+      }
+
+      function startLevel(id) {
+        const level = LEVELS[id - 1] || LEVELS[0];
+        state.save.level = id;
+        save();
+        stopGame();
+        state.game = {
+          level,
+          boxes: [],
+          nextBoxId: 1,
+          sorted: 0,
+          x2Sorted: 0,
+          combo: 0,
+          bestCombo: 0,
+          lives: maxHearts(),
+          coins: 0,
+          xp: 0,
+          spawnTimer: 200,
+          slowTimer: 0,
+          helperTimer: 0,
+          shield: false,
+          running: true,
+          ended: false,
+          perfect: true
+        };
+        dom.boxLayer.innerHTML = "";
+        showOnly("gameScreen");
+        renderGameHud();
+        state.lastTime = performance.now();
+        state.raf = requestAnimationFrame(loop);
+      }
+
+      function showOnly(screen) {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        $(screen).classList.add("active");
+        state.screen = screen;
+        dom.phone.classList.toggle("in-game", screen === "gameScreen");
+        dom.pauseOverlay.classList.remove("open");
+        dom.winOverlay.classList.remove("open");
+        refreshAll();
+      }
+
+      function stopGame() {
+        cancelAnimationFrame(state.raf);
+        state.raf = 0;
+        if (state.game) {
+          state.game.boxes.forEach((b) => b.el.remove());
+          state.game = null;
+        }
+        state.drag = null;
+      }
+
+      function loop(now) {
+        const g = state.game;
+        if (!g || !g.running || g.ended) return;
+        const dt = Math.min(0.033, (now - state.lastTime) / 1000 || 0);
+        state.lastTime = now;
+        updateGame(dt);
+        state.raf = requestAnimationFrame(loop);
+      }
+
+      function updateGame(dt) {
+        const g = state.game;
+        g.spawnTimer -= dt * 1000;
+        g.slowTimer = Math.max(0, g.slowTimer - dt);
+        g.helperTimer = Math.max(0, g.helperTimer - dt);
+        if (g.spawnTimer <= 0) {
+          spawnBox();
+          g.spawnTimer = g.level.spawn + Math.random() * 420;
+        }
+        const speedMod = g.slowTimer > 0 ? 0.48 : 1;
+        const speed = Math.max(26, (g.level.speed - state.save.upgrades.conveyor * 3) * speedMod);
+        const width = dom.phone.clientWidth;
+        for (const box of [...g.boxes]) {
+          if (box.dragging) continue;
+          box.x += speed * dt;
+          box.el.style.left = box.x + "px";
+          box.el.style.top = box.y + "px";
+          if (box.x > width + 70) {
+            removeBox(box);
+            if (box.type !== "bomb") fail("Груз пропущен");
+          }
+        }
+        renderGameHud();
+        checkWin();
+      }
+
+      function spawnBox(forced) {
+        const g = state.game;
+        if (!g) return;
+        const available = COLORS.slice(0, g.level.unlockedColorCount);
+        let type = forced || available[Math.floor(Math.random() * available.length)];
+        const specialRoll = Math.random();
+        let x2 = false;
+        if (!forced && g.level.id >= 4 && specialRoll < g.level.special) x2 = true;
+        if (!forced && g.level.id >= 6 && specialRoll > .88) type = "rainbow";
+        if (!forced && g.level.id >= 8 && specialRoll > .95) type = "bomb";
+        const el = document.createElement("div");
+        el.className = `box ${type}`;
+        el.innerHTML = x2 ? `<span class="x2-mark">x2</span>` : type === "bomb" ? `<span class="x2-mark">!</span>` : "";
+        const box = { id: g.nextBoxId++, type, x2, x: -62, y: 215 + Math.random() * 16, el, dragging: false };
+        el.dataset.id = box.id;
+        el.addEventListener("pointerdown", (event) => beginDrag(event, box));
+        dom.boxLayer.appendChild(el);
+        g.boxes.push(box);
+        el.style.left = box.x + "px";
+        el.style.top = box.y + "px";
+        sfx("click");
+      }
+
+      function beginDrag(event, box) {
+        const g = state.game;
+        if (!g || g.ended || !g.running) return;
+        event.preventDefault();
+        box.dragging = true;
+        box.el.classList.add("dragging");
+        box.el.setPointerCapture(event.pointerId);
+        const rect = box.el.getBoundingClientRect();
+        state.drag = {
+          box,
+          pointerId: event.pointerId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+          startX: box.x,
+          startY: box.y
+        };
+        box.el.addEventListener("pointermove", onDrag);
+        box.el.addEventListener("pointerup", endDrag);
+        box.el.addEventListener("pointercancel", endDrag);
+      }
+
+      function onDrag(event) {
+        const drag = state.drag;
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        const phoneRect = dom.phone.getBoundingClientRect();
+        const box = drag.box;
+        box.x = event.clientX - phoneRect.left - drag.offsetX;
+        box.y = event.clientY - phoneRect.top - drag.offsetY;
+        box.el.style.left = box.x + "px";
+        box.el.style.top = box.y + "px";
+        highlightTruck(box, event.clientX, event.clientY);
+      }
+
+      function endDrag(event) {
+        const drag = state.drag;
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        const box = drag.box;
+        box.el.classList.remove("dragging");
+        box.el.releasePointerCapture(event.pointerId);
+        box.el.removeEventListener("pointermove", onDrag);
+        box.el.removeEventListener("pointerup", endDrag);
+        box.el.removeEventListener("pointercancel", endDrag);
+        clearTruckHighlight();
+        const truck = truckUnder(event.clientX, event.clientY);
+        if (!truck) {
+          box.x = drag.startX;
+          box.y = drag.startY;
+          box.el.style.left = box.x + "px";
+          box.el.style.top = box.y + "px";
+          box.dragging = false;
+          state.drag = null;
+          toast("Отпусти коробку в грузовик");
+          return;
+        }
+        sortBox(box, truck.dataset.color);
+        state.drag = null;
+      }
+
+      function truckUnder(clientX, clientY) {
+        return [...dom.truckRow.querySelectorAll(".truck")].find((truck) => {
+          const r = truck.getBoundingClientRect();
+          return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+        });
+      }
+
+      function highlightTruck(box, clientX, clientY) {
+        clearTruckHighlight();
+        const truck = truckUnder(clientX, clientY);
+        if (truck) truck.classList.add("accept");
+        if (state.game?.helperTimer > 0 && box.type !== "bomb") {
+          dom.truckRow.querySelector(`[data-color="${box.type === "rainbow" ? "yellow" : box.type}"]`)?.classList.add("accept");
+        }
+      }
+
+      function clearTruckHighlight() {
+        dom.truckRow.querySelectorAll(".truck").forEach((t) => t.classList.remove("accept"));
+      }
+
+      function sortBox(box, truckColor) {
+        const g = state.game;
+        if (!g) return;
+        if (box.type === "bomb") {
+          removeBox(box);
+          fail("Бомбу нельзя грузить");
+          return;
+        }
+        const ok = box.type === truckColor || box.type === "rainbow";
+        if (!ok) {
+          fail(`Нужен ${COLOR_NAMES[box.type]} грузовик`);
+          box.dragging = false;
+          return;
+        }
+        const mult = box.x2 ? 2 : 1;
+        const coins = (COIN_VALUE[box.type] || 1) * mult;
+        g.sorted += 1;
+        if (box.x2) g.x2Sorted += 1;
+        g.combo += 1;
+        g.bestCombo = Math.max(g.bestCombo, g.combo);
+        g.coins += coins;
+        g.xp += 2 + mult;
+        state.save.stats.sorted += 1;
+        state.save.stats.coinsEarned += coins;
+        if (box.x2) state.save.stats.x2 += 1;
+        state.save.stats.bestCombo = Math.max(state.save.stats.bestCombo, g.bestCombo);
+        burst(box.x + 25, box.y + 20, truckColor);
+        removeBox(box);
+        sfx("good");
+      }
+
+      function fail(reason) {
+        const g = state.game;
+        if (!g || g.ended) return;
+        if (g.shield) {
+          g.shield = false;
+          toast("Щит спас от ошибки");
+          sfx("booster");
+          return;
+        }
+        g.lives -= 1;
+        g.combo = 0;
+        g.perfect = false;
+        dom.phone.classList.remove("shake");
+        void dom.phone.offsetWidth;
+        dom.phone.classList.add("shake");
+        toast(reason);
+        vibrate(50);
+        sfx("bad");
+        if (g.lives <= 0) lose();
+      }
+
+      function removeBox(box) {
+        const g = state.game;
+        if (!g) return;
+        g.boxes = g.boxes.filter((b) => b !== box);
+        box.el.remove();
+      }
+
+      function checkWin() {
+        const g = state.game;
+        if (!g || g.ended) return;
+        const done =
+          g.level.mode === "combo" ? g.bestCombo >= g.level.target :
+          g.level.mode === "x2" ? g.x2Sorted >= g.level.target :
+          g.sorted >= g.level.target;
+        if (!done) return;
+        endLevel(true);
+      }
+
+      function lose() {
+        const g = state.game;
+        if (!g) return;
+        g.ended = true;
+        g.running = false;
+        dom.winTitle.textContent = "Проигрыш";
+        dom.winStars.textContent = "☆☆☆";
+        dom.winCoins.textContent = "0";
+        dom.winXp.textContent = "0";
+        dom.winBoost.textContent = "0";
+        $("nextBtn").textContent = "Заново";
+        dom.winOverlay.classList.add("open");
+      }
+
+      function endLevel(won) {
+        const g = state.game;
+        if (!g) return;
+        g.ended = true;
+        g.running = false;
+        const stars = g.perfect ? 3 : g.lives >= Math.ceil(maxHearts() / 2) ? 2 : 1;
+        const rewardCoins = g.coins + 40 + g.level.id * 5 + stars * 20;
+        const rewardXp = g.xp + 8 + stars * 4;
+        state.save.coins += rewardCoins;
+        state.save.xp += rewardXp;
+        state.save.level = Math.min(LEVELS.length, g.level.id + 1);
+        state.save.unlocked = Math.max(state.save.unlocked, Math.min(LEVELS.length, g.level.id + 1));
+        state.save.stars[g.level.id] = Math.max(state.save.stars[g.level.id] || 0, stars);
+        if (g.perfect) state.save.stats.perfect += 1;
+        state.save.boosters.slow += 1;
+        save();
+        dom.winTitle.textContent = won ? "Победа!" : "Конец";
+        dom.winStars.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
+        dom.winCoins.textContent = rewardCoins;
+        dom.winXp.textContent = rewardXp;
+        dom.winBoost.textContent = "1";
+        $("nextBtn").textContent = "Далее";
+        dom.winOverlay.classList.add("open");
+        sfx("win");
+      }
+
+      function burst(x, y, color) {
+        const palette = { yellow: "#ffd33f", red: "#ff4c2b", green: "#75e13a", blue: "#35baff" };
+        for (let i = 0; i < 14; i++) {
+          const p = document.createElement("div");
+          p.className = "particle";
+          p.style.left = x + "px";
+          p.style.top = y + "px";
+          p.style.background = palette[color] || "#fff";
+          const a = Math.random() * Math.PI * 2;
+          const d = 28 + Math.random() * 54;
+          p.style.setProperty("--dx", Math.cos(a) * d + "px");
+          p.style.setProperty("--dy", Math.sin(a) * d + "px");
+          dom.phone.appendChild(p);
+          setTimeout(() => p.remove(), 700);
+        }
+      }
+
+      function useBooster(type) {
+        const g = state.game;
+        if (!g || g.ended || !g.running) return;
+        if ((state.save.boosters[type] || 0) <= 0) {
+          toast("Бустер закончился");
+          return;
+        }
+        state.save.boosters[type] -= 1;
+        if (type === "slow") {
+          g.slowTimer = 7;
+          toast("Лента замедлена");
+        }
+        if (type === "shield") {
+          g.shield = true;
+          toast("Щит включён");
+        }
+        if (type === "helper") {
+          g.helperTimer = 10;
+          toast("Помощник подсвечивает грузовик");
+        }
+        if (type === "auto") {
+          [...g.boxes].slice(0, 5).forEach((box) => {
+            if (box.type === "bomb") removeBox(box);
+            else sortBox(box, box.type === "rainbow" ? COLORS[0] : box.type);
+          });
+          toast("Автосортировка!");
+        }
+        save();
+        renderGameHud();
+        sfx("booster");
+      }
+
+      function renderShop() {
+        const lists = {
+          upgrades: [
+            ["❤️", "Макс. жизни", `Сейчас ${maxHearts()}. Следующий уровень даст +1 сердце.`, 500, () => state.save.upgrades.hearts < 3, () => state.save.upgrades.hearts++],
+            ["🎁", "Склад", `Увеличивает вместимость и стартовые бустеры. Уровень ${state.save.upgrades.warehouse}.`, 800, () => state.save.upgrades.warehouse < 3, () => { state.save.upgrades.warehouse++; state.save.boosters.auto++; }],
+            ["▰", "Конвейер", `Снижает стартовую скорость ленты. Уровень ${state.save.upgrades.conveyor}.`, 600, () => state.save.upgrades.conveyor < 4, () => state.save.upgrades.conveyor++],
+            ["🏠", "Тема", `Открывает более яркое оформление склада. Уровень ${state.save.upgrades.theme}.`, 700, () => state.save.upgrades.theme < 2, () => state.save.upgrades.theme++]
+          ],
+          boosters: [
+            ["❄", "Замедление x3", "Лента едет медленнее 7 секунд.", 180, () => true, () => state.save.boosters.slow += 3],
+            ["🛡", "Щит x2", "Одна ошибка не отнимет жизнь.", 220, () => true, () => state.save.boosters.shield += 2],
+            ["✋", "Помощник x2", "Подсвечивает правильный грузовик.", 160, () => true, () => state.save.boosters.helper += 2],
+            ["🎁", "Автосорт x1", "Сразу сортирует до пяти коробок.", 250, () => true, () => state.save.boosters.auto += 1]
+          ],
+          style: [
+            ["🧢", "Каска грузчика", "Косметика для профиля. Пока даёт +10 XP.", 350, () => true, () => state.save.xp += 10],
+            ["🌈", "Радужный след", "Больше частиц при сортировке. Даёт +1 гем.", 550, () => true, () => state.save.gems += 1],
+            ["🚚", "Наклейки грузовиков", "Декор склада. Даёт +20 XP.", 450, () => true, () => state.save.xp += 20]
+          ]
+        };
+        dom.shopList.innerHTML = lists[state.shopTab].map((item, index) => `
+          <div class="shop-row">
+            <div class="shop-icon">${item[0]}</div>
+            <div><h3>${item[1]}</h3><p>${item[2]}</p></div>
+            <button class="buy-btn" data-buy="${index}">🪙 ${item[3]}</button>
+          </div>
+        `).join("");
+        dom.shopList.querySelectorAll("[data-buy]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const item = lists[state.shopTab][Number(btn.dataset.buy)];
+            if (!item[4]()) {
+              toast("Уже максимум");
+              return;
+            }
+            if (state.save.coins < item[3]) {
+              toast("Не хватает монет");
+              return;
+            }
+            state.save.coins -= item[3];
+            item[5]();
+            save();
+            refreshAll();
+            toast("Покупка успешна");
+            sfx("good");
+          });
+        });
+      }
+
+      function renderDaily() {
+        const today = new Date().toISOString().slice(0, 10);
+        const claimed = state.save.lastDaily === today;
+        const day = Math.min(7, state.save.streak || 1);
+        dom.dailyRow.innerHTML = Array.from({ length: 7 }, (_, i) => {
+          const n = i + 1;
+          const status = n < day ? "✓" : n === day ? "🎁" : "🔒";
+          return `<div class="daily-card ${n === day ? "today" : ""} ${n > day ? "locked" : ""}"><b>День ${n}</b><span style="font-size:25px">${status}</span><span>${100 + n * 25}</span></div>`;
+        }).join("");
+        dom.dailyTasks.innerHTML = `
+          <div class="achievement-row"><div class="ach-icon">📦</div><div><h3>Отсортируй 25 коробок</h3><p>Прогресс сохраняется по всем уровням.</p><div class="progress-line"><span style="width:${Math.min(100, state.save.stats.sorted % 25 / 25 * 100)}%"></span></div></div><b>${state.save.stats.sorted % 25}/25</b></div>
+          <div class="achievement-row"><div class="ach-icon">🔥</div><div><h3>Собери комбо x10</h3><p>Лучшее комбо: ${state.save.stats.bestCombo}</p><div class="progress-line"><span style="width:${Math.min(100, state.save.stats.bestCombo / 10 * 100)}%"></span></div></div><b>${Math.min(10, state.save.stats.bestCombo)}/10</b></div>
+        `;
+        $("claimDailyBtn").disabled = claimed;
+        $("claimDailyBtn").textContent = claimed ? "Уже получено" : "Получить";
+      }
+
+      function claimDaily() {
+        const today = new Date().toISOString().slice(0, 10);
+        if (state.save.lastDaily === today) {
+          toast("Сегодня уже получено");
+          return;
+        }
+        const reward = 100 + Math.min(7, state.save.streak || 1) * 25;
+        state.save.coins += reward;
+        state.save.boosters.slow += 1;
+        state.save.lastDaily = today;
+        state.save.streak = Math.min(7, (state.save.streak || 1) + 1);
+        save();
+        refreshAll();
+        toast(`Награда: ${reward} монет и замедление`);
+        sfx("win");
+      }
+
+      function renderSettings() {
+        const rows = [
+          ["sound", "Звук"],
+          ["music", "Музыка"],
+          ["vibration", "Вибрация"],
+          ["labels", "Подписи цветов"]
+        ];
+        dom.settingsList.innerHTML = rows.map(([key, title]) => `
+          <button class="setting-row" data-setting="${key}">
+            <span>${title}</span>
+            <span class="switch ${state.save.settings[key] ? "on" : ""}"><span></span></span>
+          </button>
+        `).join("");
+        dom.settingsList.querySelectorAll("[data-setting]").forEach((row) => {
+          row.addEventListener("click", () => {
+            const key = row.dataset.setting;
+            state.save.settings[key] = !state.save.settings[key];
+            save();
+            renderSettings();
+            dom.truckRow.classList.toggle("labels-on", !!state.save.settings.labels);
+            sfx("click");
+          });
+        });
+      }
+
+      function renderAchievements() {
+        const achievements = [
+          ["perfect", "Перфекционист", "Пройди уровень без ошибок", state.save.stats.perfect, 10, 200],
+          ["combo", "Комбо мастер", "Собери комбо x20", state.save.stats.bestCombo, 20, 150],
+          ["sorter", "Сортировщик", "Отсортируй 1000 коробок", state.save.stats.sorted, 1000, 300],
+          ["rich", "Богатый склад", "Накопи 5000 монет", state.save.stats.coinsEarned, 5000, 500]
+        ];
+        dom.achievementList.innerHTML = achievements.map((a) => {
+          const done = a[3] >= a[4];
+          const claimed = state.save.claimedAchievements[a[0]];
+          return `
+            <div class="achievement-row">
+              <div class="ach-icon">🏅</div>
+              <div><h3>${a[1]}</h3><p>${a[2]}</p><div class="progress-line"><span style="width:${Math.min(100, a[3] / a[4] * 100)}%"></span></div></div>
+              <button class="buy-btn" data-ach="${a[0]}" ${!done || claimed ? "disabled" : ""}>${claimed ? "✓" : "🪙 " + a[5]}</button>
+            </div>
+          `;
+        }).join("");
+        dom.achievementList.querySelectorAll("[data-ach]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const item = achievements.find((a) => a[0] === btn.dataset.ach);
+            if (!item || state.save.claimedAchievements[item[0]] || item[3] < item[4]) return;
+            state.save.claimedAchievements[item[0]] = true;
+            state.save.coins += item[5];
+            save();
+            refreshAll();
+            toast("Награда получена");
+            sfx("good");
+          });
+        });
+      }
+
+      function bindEvents() {
+        $("playBtn").addEventListener("click", () => startLevel(state.save.level));
+        $("levelsBtn").addEventListener("click", () => show("levelsScreen"));
+        $("shopBtn").addEventListener("click", () => show("shopScreen"));
+        $("dailyBtn").addEventListener("click", () => show("dailyScreen"));
+        $("settingsBtn").addEventListener("click", () => show("settingsScreen"));
+        $("achievementsBtn").addEventListener("click", () => show("achievementsScreen"));
+        $("quickMenuBtn").addEventListener("click", () => state.screen === "gameScreen" ? pauseGame() : show("menuScreen"));
+        document.querySelectorAll("[data-screen]").forEach((btn) => btn.addEventListener("click", () => show(btn.dataset.screen)));
+        document.querySelectorAll("[data-filter]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll("[data-filter]").forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            state.levelFilter = btn.dataset.filter;
+            renderLevels();
+            toast(`Фильтр: ${btn.textContent.trim()}`);
+          });
+        });
+        document.querySelectorAll("[data-shop-tab]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll("[data-shop-tab]").forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            state.shopTab = btn.dataset.shopTab;
+            renderShop();
+          });
+        });
+        document.querySelectorAll("[data-booster]").forEach((btn) => btn.addEventListener("click", () => useBooster(btn.dataset.booster)));
+        $("pauseBtn").addEventListener("click", pauseGame);
+        $("resumeBtn").addEventListener("click", resumeGame);
+        $("restartBtn").addEventListener("click", () => startLevel(state.game?.level.id || state.save.level));
+        $("exitLevelBtn").addEventListener("click", () => show("menuScreen"));
+        $("pauseSettingsBtn").addEventListener("click", () => {
+          dom.pauseOverlay.classList.remove("open");
+          show("settingsScreen");
+        });
+        $("nextBtn").addEventListener("click", () => {
+          const wasLose = $("nextBtn").textContent === "Заново";
+          dom.winOverlay.classList.remove("open");
+          if (wasLose) startLevel(state.save.level);
+          else show("levelsScreen");
+        });
+        $("claimDailyBtn").addEventListener("click", claimDaily);
+        $("supportBtn").addEventListener("click", () => toast("Поддержка: напиши разработчику Motegk"));
+        window.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            if (state.screen === "gameScreen") dom.pauseOverlay.classList.contains("open") ? resumeGame() : pauseGame();
+            else show("menuScreen");
+          }
+        });
+      }
+
+      function installButtonAnimations() {
+        const release = (button) => {
+          if (!button) return;
+          button.classList.remove("is-pressing");
+        };
+
+        document.addEventListener("pointerdown", (event) => {
+          const button = event.target.closest("button");
+          if (!button || button.disabled) return;
+
+          const rect = button.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height) * 1.45;
+          const ripple = document.createElement("span");
+          ripple.className = "tap-ripple";
+          ripple.style.setProperty("--ripple-size", `${size}px`);
+          ripple.style.setProperty("--ripple-x", `${event.clientX - rect.left}px`);
+          ripple.style.setProperty("--ripple-y", `${event.clientY - rect.top}px`);
+          button.appendChild(ripple);
+
+          button.classList.remove("press-pop");
+          void button.offsetWidth;
+          button.classList.add("is-pressing", "press-pop");
+
+          setTimeout(() => ripple.remove(), 520);
+        }, { passive: true });
+
+        document.addEventListener("pointerup", (event) => release(event.target.closest("button")), { passive: true });
+        document.addEventListener("pointercancel", (event) => release(event.target.closest("button")), { passive: true });
+        document.addEventListener("pointerleave", (event) => release(event.target.closest("button")), { passive: true });
+
+        document.addEventListener("animationend", (event) => {
+          if (event.animationName === "buttonPop") event.target.classList.remove("press-pop");
+        });
+      }
+
+      function pauseGame() {
+        const g = state.game;
+        if (!g || g.ended) return;
+        g.running = false;
+        cancelAnimationFrame(state.raf);
+        dom.pauseOverlay.classList.add("open");
+        sfx("click");
+      }
+
+      function resumeGame() {
+        const g = state.game;
+        if (!g || g.ended) return;
+        dom.pauseOverlay.classList.remove("open");
+        g.running = true;
+        state.lastTime = performance.now();
+        state.raf = requestAnimationFrame(loop);
+        sfx("click");
+      }
+
+      installButtonAnimations();
+      bindEvents();
+      refreshAll();
+    })();
+  </script>
+</body>
+</html>
