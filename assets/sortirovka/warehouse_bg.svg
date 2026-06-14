@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="430" height="932" viewBox="0 0 430 932">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#193b55"/>
+      <stop offset=".45" stop-color="#0f2c42"/>
+      <stop offset="1" stop-color="#050b12"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#4a5052"/>
+      <stop offset=".48" stop-color="#1e2c34"/>
+      <stop offset="1" stop-color="#05090e"/>
+    </linearGradient>
+    <linearGradient id="rack" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#132936"/>
+      <stop offset=".5" stop-color="#345367"/>
+      <stop offset="1" stop-color="#0b1f2d"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#d8953d"/>
+      <stop offset=".45" stop-color="#9b6128"/>
+      <stop offset="1" stop-color="#4d2b15"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#f7bd64"/>
+      <stop offset="1" stop-color="#7e431d"/>
+    </linearGradient>
+    <radialGradient id="light" cx=".5" cy=".34" r=".48">
+      <stop stop-color="#ffe6a7" stop-opacity=".72"/>
+      <stop offset=".32" stop-color="#ffbf5d" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#ffbf5d" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="7"/></filter>
+    <g id="box">
+      <rect width="38" height="30" rx="3" fill="url(#wood)"/>
+      <path d="M0 10h38M19 0v30" stroke="#efba62" stroke-width="2.4" opacity=".42"/>
+      <path d="M2 2h34" stroke="#ffd27c" stroke-width="2" opacity=".22"/>
+    </g>
+  </defs>
+  <rect width="430" height="932" fill="url(#wall)"/>
+  <ellipse cx="215" cy="320" rx="178" ry="150" fill="url(#light)" filter="url(#blur)"/>
+  <path d="M76 72h278l-72 166H148z" fill="#203b4f" opacity=".78"/>
+  <path d="M116 98h198M137 143h156M160 189h110" stroke="#9fc9d7" stroke-width="5" opacity=".15"/>
+  <path d="M148 238h134l123 441H25z" fill="url(#floor)"/>
+  <path d="M148 238h134l39 441H109z" fill="#59606a" opacity=".16"/>
+  <path d="M186 238h58l11 441h-80z" fill="#d4d7d8" opacity=".08"/>
+  <g opacity=".97">
+    <path d="M0 235l148-65-9 445L0 742z" fill="url(#rack)"/>
+    <path d="M430 235l-148-65 9 445 139 127z" fill="url(#rack)"/>
+    <path d="M18 278l124-49M17 355l124-34M14 437l125-20M10 528l127-9" stroke="url(#beam)" stroke-width="10" opacity=".78"/>
+    <path d="M412 278l-124-49M413 355l-124-34M416 437l-125-20M420 528l-127-9" stroke="url(#beam)" stroke-width="10" opacity=".78"/>
+    <path d="M145 172l-78 482M285 172l78 482" stroke="#091924" stroke-width="7" opacity=".6"/>
+    <path d="M145 172l-78 482M285 172l78 482" stroke="#6f8da0" stroke-width="3" opacity=".2"/>
+  </g>
+  <g opacity=".98">
+    <g transform="translate(31 254) skewY(-9)">
+      <use href="#box" x="0" y="0"/><use href="#box" x="42" y="-8"/><use href="#box" x="82" y="-15"/>
+      <use href="#box" x="4" y="74"/><use href="#box" x="47" y="66"/><use href="#box" x="88" y="58"/>
+      <use href="#box" x="0" y="154"/><use href="#box" x="43" y="147"/><use href="#box" x="86" y="139"/>
+      <use href="#box" x="3" y="242"/><use href="#box" x="46" y="235"/><use href="#box" x="88" y="228"/>
+    </g>
+    <g transform="translate(279 239) skewY(9)">
+      <use href="#box" x="82" y="0"/><use href="#box" x="40" y="-8"/><use href="#box" x="0" y="-15"/>
+      <use href="#box" x="80" y="74"/><use href="#box" x="37" y="66"/><use href="#box" x="-4" y="58"/>
+      <use href="#box" x="84" y="154"/><use href="#box" x="41" y="147"/><use href="#box" x="-2" y="139"/>
+      <use href="#box" x="80" y="242"/><use href="#box" x="37" y="235"/><use href="#box" x="-5" y="228"/>
+    </g>
+  </g>
+  <path d="M0 638h430v294H0z" fill="#02070c" opacity=".76"/>
+  <path d="M76 616h278l76 132H0z" fill="#111b22" opacity=".56"/>
+  <rect y="70" width="430" height="862" fill="url(#light)" opacity=".18"/>
+  <rect width="430" height="932" fill="#02070f" opacity=".08"/>
+</svg>
