@@ -1270,6 +1270,20 @@
       line-height: 1.28;
     }
 
+    .shop-row .stock-line {
+      display: inline-flex;
+      gap: 5px;
+      align-items: center;
+      margin-top: 6px;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: rgba(4,17,28,.46);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #fff7d8;
+      font-size: 11px;
+      font-weight: 1000;
+    }
+
     .buy-btn {
       min-height: 42px;
       border-radius: 10px;
@@ -2247,10 +2261,10 @@
             { icon: "💎", title: "Премиум тема", desc: `Открывает более яркое оформление склада. Уровень ${state.save.upgrades.theme}.`, cost: 8, currency: "gems", canBuy: () => state.save.upgrades.theme < 2, buy: () => state.save.upgrades.theme++ }
           ],
           boosters: [
-            { icon: "❄", title: "Замедление x3", desc: "Лента едет медленнее 7 секунд.", cost: 180, currency: "coins", canBuy: () => true, buy: () => state.save.boosters.slow += 3 },
-            { icon: "🛡", title: "Щит x2", desc: "Одна ошибка не отнимет жизнь.", cost: 3, currency: "gems", canBuy: () => true, buy: () => state.save.boosters.shield += 2 },
-            { icon: "✋", title: "Помощник x2", desc: "Подсвечивает правильный грузовик.", cost: 160, currency: "coins", canBuy: () => true, buy: () => state.save.boosters.helper += 2 },
-            { icon: "🚚", title: "Автосорт x1", desc: "Сразу сортирует до пяти коробок.", cost: 4, currency: "gems", canBuy: () => true, buy: () => state.save.boosters.auto += 1 }
+            { icon: "❄", title: "Замедление", desc: "Лента едет медленнее 7 секунд.", amount: 3, stockKey: "slow", cost: 180, currency: "coins", canBuy: () => true, buy: () => state.save.boosters.slow += 3 },
+            { icon: "🛡", title: "Щит", desc: "Одна ошибка не отнимет жизнь.", amount: 2, stockKey: "shield", cost: 3, currency: "gems", canBuy: () => true, buy: () => state.save.boosters.shield += 2 },
+            { icon: "✋", title: "Помощник", desc: "Подсвечивает правильный грузовик.", amount: 2, stockKey: "helper", cost: 160, currency: "coins", canBuy: () => true, buy: () => state.save.boosters.helper += 2 },
+            { icon: "🚚", title: "Автосорт", desc: "Сразу сортирует до пяти коробок.", amount: 1, stockKey: "auto", cost: 4, currency: "gems", canBuy: () => true, buy: () => state.save.boosters.auto += 1 }
           ],
           style: [
             { icon: "🧢", title: "Каска грузчика", desc: "Косметика для профиля. Даёт +10 XP.", cost: 350, currency: "coins", canBuy: () => true, buy: () => state.save.xp += 10 },
@@ -2260,10 +2274,13 @@
         };
         dom.shopList.innerHTML = lists[state.shopTab].map((item, index) => {
           const maxed = !item.canBuy();
+          const stockLine = item.stockKey
+            ? `<p class="stock-line">У тебя: <b>${state.save.boosters[item.stockKey] || 0}</b> • покупка +${item.amount}</p>`
+            : "";
           return `
             <div class="shop-row">
               <div class="shop-icon">${item.icon}</div>
-              <div><h3>${item.title}</h3><p>${item.desc}</p></div>
+              <div><h3>${item.title}</h3><p>${item.desc}</p>${stockLine}</div>
               <button class="buy-btn" data-buy="${index}" ${maxed ? "disabled" : ""}>${maxed ? "Макс" : priceHtml(item.currency, item.cost)}</button>
             </div>
           `;
