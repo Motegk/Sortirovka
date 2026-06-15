@@ -1074,7 +1074,7 @@
 
     .reward-line {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: repeat(4, 1fr);
       gap: 9px;
       padding: 13px;
       border-radius: 13px;
@@ -1450,6 +1450,7 @@
         </div>
         <button class="big-btn" id="playBtn">Играть</button>
         <button class="blue-btn" id="levelsBtn" style="width:min(246px,86%);">Уровни</button>
+        <a class="finish-link" id="menuFinishLink" href="http://192.168.0.21:8765/take/quiz-f42b6a86" target="_blank" rel="noopener">Ты победил</a>
         <div class="nav-grid">
           <button class="square-btn" id="shopBtn"><span class="square-icon shop-store-icon" aria-hidden="true"></span>Магазин</button>
           <button class="square-btn" id="dailyBtn"><span class="square-icon daily-reward-icon" aria-hidden="true"></span>Ежедневные<br>награды</button>
@@ -1572,6 +1573,7 @@
         <div class="reward-line">
           <span>🪙 <b id="winCoins">120</b></span>
           <span>⭐ <b id="winXp">10</b></span>
+          <span>💎 <b id="winGems">1</b></span>
           <span>❄ x<b id="winBoost">1</b></span>
         </div>
         <a class="finish-link" id="finishLink" href="http://192.168.0.21:8765/take/quiz-f42b6a86" target="_blank" rel="noopener">http://192.168.0.21:8765/take/quiz-f42b6a86</a>
@@ -1588,6 +1590,8 @@
       const COLORS = ["yellow", "red", "green", "blue"];
       const COLOR_NAMES = { yellow: "Жёлтый", red: "Красный", green: "Зелёный", blue: "Синий", rainbow: "Радуга", bomb: "Бомба" };
       const COIN_VALUE = { yellow: 2, red: 2, green: 1, blue: 1, rainbow: 3 };
+      const BOMB_DAMAGE = 2;
+      const BOMB_RADIUS = 270;
       const RANKS = [
         { name: "Новичок", xp: 0 },
         { name: "Рабочий склада", xp: 260 },
@@ -1680,8 +1684,10 @@
         winStars: $("winStars"),
         winCoins: $("winCoins"),
         winXp: $("winXp"),
+        winGems: $("winGems"),
         winBoost: $("winBoost"),
         finishLink: $("finishLink"),
+        menuFinishLink: $("menuFinishLink"),
         toast: $("toast"),
         shopList: $("shopList"),
         dailyRow: $("dailyRow"),
@@ -1793,6 +1799,7 @@
         renderDaily();
         renderSettings();
         renderAchievements();
+        renderCompletionLink();
         dom.truckRow.classList.toggle("labels-on", !!state.save.settings.labels);
       }
 
@@ -1824,6 +1831,16 @@
         const next = LEVELS.find((lvl) => !state.save.stars[lvl.id]);
         if (!next) return LEVELS.length;
         return isLevelUnlocked(next.id) ? next.id : Math.max(1, next.id - 1);
+      }
+
+      function allLevelsComplete() {
+        return LEVELS.every((lvl) => state.save.stars[lvl.id]);
+      }
+
+      function renderCompletionLink() {
+        dom.menuFinishLink.href = COMPLETION_LINK;
+        dom.menuFinishLink.textContent = "Ты победил";
+        dom.menuFinishLink.classList.toggle("show", allLevelsComplete());
       }
 
       function currencyIcon(type) {
@@ -2016,10 +2033,10 @@
         const g = state.game;
         if (!g || g.ended || !g.running) return;
         event.preventDefault();
-                if (box.type === "bomb") {
-                            explodeBomb(box);
-                            return;
-                }
+        if (box.type === "bomb") {
+          explodeBomb(box);
+          return;
+        }
         box.dragging = true;
         box.el.classList.add("dragging");
         box.el.setPointerCapture(event.pointerId);
@@ -2098,8 +2115,7 @@
         const g = state.game;
         if (!g) return;
         if (box.type === "bomb") {
-          removeBox(box);
-          fail("Бомбу нельзя грузить");
+          explodeBomb(box);
           return;
         }
         const ok = box.type === truckColor || box.type === "rainbow";
@@ -2160,6 +2176,34 @@
         box.el.remove();
       }
 
+      function explodeBomb(box) {
+        const g = state.game;
+        if (!g || g.ended || !g.boxes.includes(box)) return;
+        const cx = box.x + 25;
+        const cy = box.y + 22;
+        const hitBoxes = [...g.boxes].filter((item) => {
+          const itemX = item.x + 25;
+          const itemY = item.y + 22;
+          return Math.hypot(itemX - cx, itemY - cy) <= BOMB_RADIUS;
+        });
+
+        if (state.drag?.box === box) state.drag = null;
+        hitBoxes.forEach(removeBox);
+        g.lives = Math.max(0, g.lives - BOMB_DAMAGE);
+        g.combo = 0;
+        g.perfect = false;
+
+        dom.phone.classList.remove("shake");
+        void dom.phone.offsetWidth;
+        dom.phone.classList.add("shake");
+        explosionBurst(cx, cy);
+        toast(`Бомба взорвалась: -${BOMB_DAMAGE} сердца, уничтожено ${hitBoxes.length}`);
+        vibrate(110);
+        sfx("bad");
+        renderGameHud();
+        if (g.lives <= 0) lose();
+      }
+
       function checkWin() {
         const g = state.game;
         if (!g || g.ended) return;
@@ -2170,17 +2214,7 @@
         if (!done) return;
         endLevel(true);
       }
-      function explodeBomb(box) {
-                const g = state.game; if (!g || g.ended || !g.boxes.includes(box)) return;
-                const cx = box.x + 25, cy = box.y + 22; [...g.boxes].filter((b) => Math.hypot(b.x + 25 - cx, b.y + 22 - cy) <= 270).forEach(removeBox);
-                state.drag = null; g.lives = Math.max(0, g.lives - 2); g.combo = 0; g.perfect = false;
-                dom.phone.classList.remove("shake"); void dom.phone.offsetWidth; dom.phone.classList.add("shake");
-                burst(cx, cy, "red"); burst(cx + 12, cy - 8, "yellow");
-                toast("\u0411\u043e\u043c\u0431\u0430: -2 \u0441\u0435\u0440\u0434\u0446\u0430"); vibrate(110); sfx("bad"); renderGameHud();
-                if (g.lives <= 0) lose();
-      }
 
-      
       function lose() {
         const g = state.game;
         if (!g) return;
@@ -2190,6 +2224,7 @@
         dom.winStars.textContent = "☆☆☆";
         dom.winCoins.textContent = "0";
         dom.winXp.textContent = "0";
+        dom.winGems.textContent = "0";
         dom.winBoost.textContent = "0";
         dom.finishLink.classList.remove("show");
         $("nextBtn").textContent = "Заново";
@@ -2204,8 +2239,10 @@
         const stars = g.perfect ? 3 : g.lives >= Math.ceil(maxHearts() / 2) ? 2 : 1;
         const rewardCoins = g.coins + 40 + g.level.id * 5 + stars * 20;
         const rewardXp = g.xp + 8 + stars * 4;
+        const rewardGems = 1;
         state.save.coins += rewardCoins;
         state.save.xp += rewardXp;
+        state.save.gems += rewardGems;
         state.save.level = Math.min(LEVELS.length, g.level.id + 1);
         state.save.unlocked = Math.max(state.save.unlocked, Math.min(LEVELS.length, g.level.id + 1));
         state.save.stars[g.level.id] = Math.max(state.save.stars[g.level.id] || 0, stars);
@@ -2219,6 +2256,7 @@
         dom.winStars.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
         dom.winCoins.textContent = rewardCoins;
         dom.winXp.textContent = rewardXp;
+        dom.winGems.textContent = rewardGems;
         dom.winBoost.textContent = "1";
         const finalLevel = g.level.id >= LEVELS.length;
         dom.finishLink.href = COMPLETION_LINK;
@@ -2243,6 +2281,27 @@
           p.style.setProperty("--dy", Math.sin(a) * d + "px");
           dom.phone.appendChild(p);
           setTimeout(() => p.remove(), 700);
+        }
+      }
+
+      function explosionBurst(x, y) {
+        const palette = ["#fff1a8", "#ffb02f", "#ff5b2e", "#323941"];
+        for (let i = 0; i < 34; i++) {
+          const p = document.createElement("div");
+          p.className = "particle";
+          const size = 5 + Math.random() * 8;
+          p.style.left = x + "px";
+          p.style.top = y + "px";
+          p.style.width = size + "px";
+          p.style.height = size + "px";
+          p.style.background = palette[i % palette.length];
+          p.style.boxShadow = "0 0 14px rgba(255,122,32,.85)";
+          const a = Math.random() * Math.PI * 2;
+          const d = 48 + Math.random() * 112;
+          p.style.setProperty("--dx", Math.cos(a) * d + "px");
+          p.style.setProperty("--dy", Math.sin(a) * d + "px");
+          dom.phone.appendChild(p);
+          setTimeout(() => p.remove(), 760);
         }
       }
 
@@ -2418,6 +2477,39 @@
         return result.map((quest) => ({ ...quest, id: `${key}_${quest.id}` }));
       }
 
+      function questCycleKey(key = dateKey()) {
+        const [year, month, day] = key.split("-").map(Number);
+        return Math.floor(new Date(year, month - 1, day).getTime() / 259200000);
+      }
+
+      function mainQuestPool() {
+        const cleared = Object.keys(state.save.stars || {}).length;
+        return [
+          { id: "perfect", icon: "🎯", title: "Перфекционист", desc: "Пройди уровни без ошибок.", value: state.save.stats.perfect, target: 10, reward: { coins: 200, gems: 2 } },
+          { id: "combo", icon: "🔥", title: "Комбо мастер", desc: "Собери комбо x20.", value: state.save.stats.bestCombo, target: 20, reward: { coins: 150, gems: 1 } },
+          { id: "sorter", icon: "📦", title: "Сортировщик", desc: "Отсортируй 1000 коробок.", value: state.save.stats.sorted, target: 1000, reward: { coins: 300, gems: 3 } },
+          { id: "rich", icon: "💰", title: "Богатый склад", desc: "Накопи 5000 монет.", value: state.save.stats.coinsEarned, target: 5000, reward: { coins: 500, gems: 5 } },
+          { id: "x2master", icon: "✦", title: "Ценный груз", desc: "Отсортируй 25 коробок x2.", value: state.save.stats.x2 || 0, target: 25, reward: { coins: 260, gems: 3 } },
+          { id: "levels", icon: "🏆", title: "Покоритель уровней", desc: "Пройди 12 разных уровней.", value: cleared, target: 12, reward: { coins: 350, gems: 4 } }
+        ];
+      }
+
+      function threeDayQuests() {
+        const key = questCycleKey();
+        const pool = mainQuestPool();
+        const start = key % pool.length;
+        const result = [];
+        for (let i = 0; result.length < 4 && i < pool.length * 2; i++) {
+          const quest = pool[(start + i * 2) % pool.length];
+          if (!result.some((item) => item.id === quest.id)) result.push(quest);
+        }
+        return result.map((quest) => ({
+          ...quest,
+          id: `${key}_${quest.id}`,
+          desc: `${quest.desc} Обновляется каждые 3 дня.`
+        }));
+      }
+
       function renderDaily() {
         const today = dateKey();
         const claimed = state.save.lastDaily === today;
@@ -2482,12 +2574,7 @@
           ...quest,
           desc: `${quest.desc} Обновится завтра.`,
           value: dailyProgress[quest.metric] || 0
-        })) : [
-          { id: "perfect", icon: "🎯", title: "Перфекционист", desc: "Пройди уровень без ошибок.", value: state.save.stats.perfect, target: 10, reward: { coins: 200, gems: 2 } },
-          { id: "combo", icon: "🔥", title: "Комбо мастер", desc: "Собери комбо x20.", value: state.save.stats.bestCombo, target: 20, reward: { coins: 150, gems: 1 } },
-          { id: "sorter", icon: "📦", title: "Сортировщик", desc: "Отсортируй 1000 коробок.", value: state.save.stats.sorted, target: 1000, reward: { coins: 300, gems: 3 } },
-          { id: "rich", icon: "💰", title: "Богатый склад", desc: "Накопи 5000 монет.", value: state.save.stats.coinsEarned, target: 5000, reward: { coins: 500, gems: 5 } }
-        ];
+        })) : threeDayQuests();
         const claimedMap = state.questTab === "daily" ? state.save.claimedDailyTasks : state.save.claimedAchievements;
         dom.achievementList.innerHTML = quests.map((quest) => {
           const done = quest.value >= quest.target;
