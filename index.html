@@ -2016,6 +2016,10 @@
         const g = state.game;
         if (!g || g.ended || !g.running) return;
         event.preventDefault();
+                if (box.type === "bomb") {
+                            explodeBomb(box);
+                            return;
+                }
         box.dragging = true;
         box.el.classList.add("dragging");
         box.el.setPointerCapture(event.pointerId);
@@ -2166,7 +2170,17 @@
         if (!done) return;
         endLevel(true);
       }
+      function explodeBomb(box) {
+                const g = state.game; if (!g || g.ended || !g.boxes.includes(box)) return;
+                const cx = box.x + 25, cy = box.y + 22; [...g.boxes].filter((b) => Math.hypot(b.x + 25 - cx, b.y + 22 - cy) <= 270).forEach(removeBox);
+                state.drag = null; g.lives = Math.max(0, g.lives - 2); g.combo = 0; g.perfect = false;
+                dom.phone.classList.remove("shake"); void dom.phone.offsetWidth; dom.phone.classList.add("shake");
+                burst(cx, cy, "red"); burst(cx + 12, cy - 8, "yellow");
+                toast("\u0411\u043e\u043c\u0431\u0430: -2 \u0441\u0435\u0440\u0434\u0446\u0430"); vibrate(110); sfx("bad"); renderGameHud();
+                if (g.lives <= 0) lose();
+      }
 
+      
       function lose() {
         const g = state.game;
         if (!g) return;
