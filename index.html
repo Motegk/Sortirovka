@@ -1638,6 +1638,8 @@
         stats: { sorted: 650, bestCombo: 15, coinsEarned: 1250, perfect: 5, x2: 0 },
         claimedAchievements: {},
         claimedDailyTasks: {},
+        dailyQuestDate: "",
+        dailyQuestProgress: {},
         lastDaily: "",
         streak: 3
       };
@@ -2114,6 +2116,13 @@
         state.save.stats.coinsEarned += coins;
         if (box.x2) state.save.stats.x2 += 1;
         state.save.stats.bestCombo = Math.max(state.save.stats.bestCombo, g.bestCombo);
+        const dailyProgress = ensureDailyQuestState();
+        dailyProgress.sorted = (dailyProgress.sorted || 0) + 1;
+        dailyProgress.coins = (dailyProgress.coins || 0) + coins;
+        dailyProgress.combo = Math.max(dailyProgress.combo || 0, g.combo);
+        if (box.x2) dailyProgress.x2 = (dailyProgress.x2 || 0) + 1;
+        if (box.type === "rainbow") dailyProgress.rainbow = (dailyProgress.rainbow || 0) + 1;
+        save();
         burst(box.x + 25, box.y + 20, truckColor);
         removeBox(box);
         sfx("good");
@@ -2187,6 +2196,9 @@
         state.save.unlocked = Math.max(state.save.unlocked, Math.min(LEVELS.length, g.level.id + 1));
         state.save.stars[g.level.id] = Math.max(state.save.stars[g.level.id] || 0, stars);
         if (g.perfect) state.save.stats.perfect += 1;
+        const dailyProgress = ensureDailyQuestState();
+        dailyProgress.levels = (dailyProgress.levels || 0) + 1;
+        if (g.perfect) dailyProgress.perfect = (dailyProgress.perfect || 0) + 1;
         state.save.boosters.slow += 1;
         save();
         dom.winTitle.textContent = won ? "Победа!" : "Конец";
@@ -2330,8 +2342,70 @@
         return parts.join(", ");
       }
 
+      function dateKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function ensureDailyQuestState() {
+        const today = dateKey();
+        if (state.save.dailyQuestDate !== today) {
+          state.save.dailyQuestDate = today;
+          state.save.claimedDailyTasks = {};
+          state.save.dailyQuestProgress = {
+            sorted: 0,
+            coins: 0,
+            combo: 0,
+            x2: 0,
+            rainbow: 0,
+            levels: 0,
+            perfect: 0
+          };
+          save();
+        }
+        state.save.dailyQuestProgress ||= {};
+        return state.save.dailyQuestProgress;
+      }
+
+      function dayNumber(key = dateKey()) {
+        return Number(key.replaceAll("-", ""));
+      }
+
+      function dailyQuestPool() {
+        const advanced = state.save.level >= 4 || !!state.save.stars[3];
+        const rainbow = state.save.level >= 6 || !!state.save.stars[5];
+        return [
+          { id: "sort20", icon: "📦", title: "Быстрая смена", desc: "Отсортируй 20 коробок сегодня.", metric: "sorted", target: 20, reward: { coins: 110, gems: 1 } },
+          { id: "sort35", icon: "🏭", title: "Большая партия", desc: "Отсортируй 35 коробок сегодня.", metric: "sorted", target: 35, reward: { coins: 160, gems: 1 } },
+          { id: "coins30", icon: "🪙", title: "Доход склада", desc: "Заработай 30 монет в катках сегодня.", metric: "coins", target: 30, reward: { coins: 120, gems: 1 } },
+          { id: "combo10", icon: "🔥", title: "Горячее комбо", desc: "Собери комбо x10 сегодня.", metric: "combo", target: 10, reward: { coins: 130, gems: 1 } },
+          { id: "levels1", icon: "⭐", title: "Одна победа", desc: "Пройди 1 уровень сегодня.", metric: "levels", target: 1, reward: { coins: 140, gems: 1 } },
+          { id: "perfect1", icon: "🎯", title: "Без ошибок", desc: "Пройди уровень идеально сегодня.", metric: "perfect", target: 1, reward: { coins: 180, gems: 2 } },
+          ...(advanced ? [
+            { id: "x2_3", icon: "✦", title: "Ценный груз", desc: "Отсортируй 3 коробки x2 сегодня.", metric: "x2", target: 3, reward: { coins: 170, gems: 2 } }
+          ] : []),
+          ...(rainbow ? [
+            { id: "rainbow4", icon: "🌈", title: "Радужная смена", desc: "Отсортируй 4 радужные коробки сегодня.", metric: "rainbow", target: 4, reward: { coins: 190, gems: 2 } }
+          ] : [])
+        ];
+      }
+
+      function todayDailyQuests() {
+        const key = dateKey();
+        const pool = dailyQuestPool();
+        const start = dayNumber(key) % pool.length;
+        const result = [];
+        for (let i = 0; result.length < 3 && i < pool.length * 2; i++) {
+          const quest = pool[(start + i * 2) % pool.length];
+          if (!result.some((item) => item.id === quest.id)) result.push(quest);
+        }
+        return result.map((quest) => ({ ...quest, id: `${key}_${quest.id}` }));
+      }
+
       function renderDaily() {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = dateKey();
         const claimed = state.save.lastDaily === today;
         const day = Math.min(7, state.save.streak || 1);
         const activeDay = claimed ? Math.max(1, day - 1) : day;
@@ -2347,7 +2421,7 @@
       }
 
       function claimDaily() {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = dateKey();
         if (state.save.lastDaily === today) {
           toast("Сегодня уже получено");
           return;
@@ -2389,11 +2463,12 @@
       }
 
       function renderAchievements() {
-        const quests = state.questTab === "daily" ? [
-          { id: "daily_sort25", icon: "📦", title: "Складская смена", desc: "Отсортируй 25 коробок.", value: state.save.stats.sorted, target: 25, reward: { coins: 125, gems: 1 } },
-          { id: "daily_combo10", icon: "🔥", title: "Горячее комбо", desc: "Собери комбо x10.", value: state.save.stats.bestCombo, target: 10, reward: { coins: 100, gems: 1 } },
-          { id: "daily_x2", icon: "✦", title: "Ценный груз", desc: "Отсортируй 3 коробки x2.", value: state.save.stats.x2, target: 3, reward: { coins: 140, gems: 2 } }
-        ] : [
+        const dailyProgress = ensureDailyQuestState();
+        const quests = state.questTab === "daily" ? todayDailyQuests().map((quest) => ({
+          ...quest,
+          desc: `${quest.desc} Обновится завтра.`,
+          value: dailyProgress[quest.metric] || 0
+        })) : [
           { id: "perfect", icon: "🎯", title: "Перфекционист", desc: "Пройди уровень без ошибок.", value: state.save.stats.perfect, target: 10, reward: { coins: 200, gems: 2 } },
           { id: "combo", icon: "🔥", title: "Комбо мастер", desc: "Собери комбо x20.", value: state.save.stats.bestCombo, target: 20, reward: { coins: 150, gems: 1 } },
           { id: "sorter", icon: "📦", title: "Сортировщик", desc: "Отсортируй 1000 коробок.", value: state.save.stats.sorted, target: 1000, reward: { coins: 300, gems: 3 } },
